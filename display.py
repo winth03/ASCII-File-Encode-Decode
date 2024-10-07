@@ -83,7 +83,7 @@ class Img2AsciiGUI:
 		self.original_label.pack(expand=True, fill=tk.BOTH)
 
 		# Label สำหรับ size limit
-		self.size_limit_label = tk.Label(image_frame, text=f"File to hide size limit: {format_bytes(self.size_limit) if self.size_limit >= 0 else "-"}")
+		self.size_limit_label = tk.Label(image_frame, text=f"File to hide size limit: {'~' + format_bytes(self.size_limit) if self.size_limit >= 0 else '-'}")
 		self.size_limit_label.pack(side=tk.TOP, padx=5, pady=5, anchor=tk.NW)
 
       	# ปุ่ม Copy
@@ -147,8 +147,8 @@ class Img2AsciiGUI:
 			self.result_text.insert(tk.END, f"Image added: {self.image_path}\n")
 
 			img_width, img_height = Image.open(self.image_path).size
-			self.size_limit = (img_width // GRID_RES) * (img_height // GRID_RES) - 40
-			self.size_limit_label.configure(text=f"File to hide size limit: {format_bytes(self.size_limit) if self.size_limit >= 0 else "-"}")
+			self.size_limit = (img_width // GRID_RES) * (img_height // GRID_RES) - 24
+			self.size_limit_label.configure(text=f"File to hide size limit: {'~' + format_bytes(self.size_limit) if self.size_limit >= 0 else '-'}")
 
 	def add_file(self):
 		self.file_to_hide = filedialog.askopenfilename(filetypes=[("All Files", "*.*")])
@@ -176,7 +176,7 @@ class Img2AsciiGUI:
 				stop_time = time.time_ns()
 				self.result_text.insert(tk.END, f"Encoded successfully in {stop_time - start_time} ns. Output saved to: {ascii_path}\n")
 				with open(ascii_path, 'r', encoding='utf-8') as file:
-					ascii_content = file.read()		
+					ascii_content = file.read()
 				self.ascii_text.delete(1.0, tk.END)
 				self.ascii_text.insert(tk.END, ascii_content)	
 		except Exception as e:
