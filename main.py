@@ -5,12 +5,15 @@ import sys
 from tkinter import filedialog
 import tkinter as tk
 
+GRID_RES = 1
+
 class Img2Ascii:
     def __init__(self):
         self.char_map = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!l;:,\"^`'. "
 
-    def write_ascii(self, image_path: str, ascii_path: str, message: str, inverted: bool) -> None:
+    def write_ascii(self, image_path: str, ascii_path: str, message: str, inverted: bool, grid_res: int = GRID_RES) -> None:
         image = Image.open(image_path)
+        # image = image.resize((image.width * 10, image.height * 10))
         img_width, img_height = image.size
         pixels = np.array(image.convert('L'))
 
@@ -19,8 +22,10 @@ class Img2Ascii:
             for c in file_data:
                 ("-debug" in sys.argv) and print(f"Debug: {format(c, '08b')} {c} {c.to_bytes(1, 'big')}")
 
-        if len(file_data) + 40 > (img_width // 8) * (img_height // 8):
-            raise ValueError(f"Error: Message Too Long ({len(file_data) + 40} > {(img_width // 8) * (img_height // 8)}") 
+        msg_size = len(file_data) + 40
+        size_limit = (img_width // grid_res) * (img_height // grid_res)
+        if msg_size > size_limit:
+            raise ValueError(f"Error: Message Too Long ({msg_size} > {size_limit}") 
 
         message_length = len(file_data)
         extension = os.path.splitext(message)[1][1:]
@@ -28,10 +33,9 @@ class Img2Ascii:
         message = format(message_length, '016b') + ''.join(format(ord(c), '08b') for c in extension) + ''.join(format(c, '08b') for c in file_data)        
 
         message_index = 0
-        grid_res = 8
         char_h, char_w = img_height // grid_res, img_width // grid_res
 
-        with open(ascii_path, 'w', encoding="ascii") as file:
+        with open(ascii_path, 'w', encoding="utf-8-sig") as file:
             file.write("")
             file.flush()
             for y in range(char_h):
