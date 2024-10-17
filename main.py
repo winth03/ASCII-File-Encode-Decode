@@ -28,9 +28,10 @@ class Img2Ascii:
         b_extension = ''.join(format(ord(c), '08b') for c in extension)
         
         extension_length = len(b_extension)
-        message_length = len(b_message) + 16 + 8 + extension_length
+        message_length = len(b_message) + 32 + 8 + extension_length
         
-        full_message = format(message_length, '016b') + format(extension_length, '08b') + b_extension + b_message
+        full_message = format(message_length, '032b') + format(extension_length, '08b') + b_extension + b_message
+        print(message_length, len(full_message))
         
         # Vectorized mapping
         char_h, char_w = reduced.shape
@@ -41,24 +42,19 @@ class Img2Ascii:
         map_indices = map_values.astype(int)
         
         # Step 2: Prepare message array
-        msg_array = np.zeros(reduced.shape, dtype=int)
-        for i, bit in enumerate(full_message):
-            if i < char_h * char_w:
-                msg_array[i // char_w, i % char_w] = int(bit)
+        msg_array = np.pad(np.array([int(bit) for bit in full_message], dtype=int), (0, char_h * char_w - len(full_message)), 'constant', constant_values=0)
+        msg_array = msg_array.reshape(char_h, char_w)
         
         # Step 3: Create a mask for pixels that need modification
-        need_modification = np.zeros(reduced.shape, dtype=bool)
-        for i in range(len(full_message)):
-            if i < char_h * char_w:
-                y, x = i // char_w, i % char_w
-                need_modification[y, x] = (msg_array[y, x] != map_indices[y, x] % 2)
+        need_modification = (msg_array != (map_indices % 2)).astype(bool)
         
         # Step 4: Apply modifications
         adjustments = np.where(offset_bias > 4, 1, -1)
         map_indices = np.where(need_modification, map_indices + adjustments, map_indices)
         
         # Step 5: Clip values
-        map_indices = np.clip(map_indices, 0, len(self.char_map) - 1)
+        map_indices[map_indices < 0] = 1
+        map_indices[map_indices >= len(self.char_map)] = len(self.char_map) - 2
         
         # Step 6: Handle inversion
         if inverted:
@@ -70,7 +66,7 @@ class Img2Ascii:
                 line = ""
                 for x in range(char_w):
                     line += f"{self.char_map[map_indices[y, x]]} "
-                file.write(line.rstrip() + '\n')
+                file.write(line + '\n')
 
     def read_ascii(self, ascii_path: str) -> tuple[bytes, str]:
         with open(ascii_path, 'r', encoding="utf-8-sig") as file:
@@ -81,14 +77,14 @@ class Img2Ascii:
 
         message = ""
 
-        for i in range(16):
+        for i in range(32):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
 
         msg_length = int(message, 2)
         message = ""
 
-        for i in range(16, 24):
+        for i in range(32, 40):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
 
@@ -96,7 +92,7 @@ class Img2Ascii:
         message = ""
         extension = ""
 
-        for i in range(24, 24 + ext_length):
+        for i in range(40, 40 + ext_length):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
             if len(message) == 8:
@@ -106,7 +102,7 @@ class Img2Ascii:
         message = bytearray()
         letter = ""
         offset = 0
-        i = 24 + ext_length
+        i = 40 + ext_length
         while i < msg_length:
             ch = input_text[i*2 + offset]
             if ch == '\n':
@@ -126,7 +122,6 @@ def main():
         ascii_path = sys.argv[1]
         obj = Img2Ascii()
         try:
-            # print(obj.read_ascii(ascii_path))
             data, extension = obj.read_ascii(ascii_path)
             file_name = filedialog.asksaveasfilename(title="Save File", filetypes=[("Files", f"*.{extension}")], initialfile=f"decoded.{extension}", defaultextension=extension)
             with open(file_name, 'wb') as file:
