@@ -42,24 +42,27 @@ class Img2Ascii:
         map_indices = map_values.astype(int)
         
         # Step 2: Prepare message array
-        msg_array = np.zeros(reduced.shape, dtype=int)
-        for i, bit in enumerate(full_message):
-            if i < char_h * char_w:
-                msg_array[i // char_w, i % char_w] = int(bit)
+        msg_array = np.pad(np.array([bit for bit in full_message], dtype=str), (0, char_h * char_w - len(full_message)), 'constant', constant_values='0')
+        msg_array = msg_array.reshape(char_h, char_w)
+        # for i, bit in enumerate(full_message):
+        #     if i < char_h * char_w:
+        #         msg_array[i // char_w, i % char_w] = int(bit)
         
         # Step 3: Create a mask for pixels that need modification
-        need_modification = np.zeros(reduced.shape, dtype=bool)
-        for i in range(len(full_message)):
-            if i < char_h * char_w:
-                y, x = i // char_w, i % char_w
-                need_modification[y, x] = (msg_array[y, x] != map_indices[y, x] % 2)
+        # need_modification = np.zeros(reduced.shape, dtype=bool)
+        need_modification = (msg_array != (map_indices % 2).astype(str)).astype(bool)
+        # for i in range(len(full_message)):
+        #     if i < char_h * char_w:
+        #         y, x = i // char_w, i % char_w
+        #         need_modification[y, x] = (msg_array[y, x] != (map_indices[y, x] % 2).astype(str))
         
         # Step 4: Apply modifications
         adjustments = np.where(offset_bias > 4, 1, -1)
         map_indices = np.where(need_modification, map_indices + adjustments, map_indices)
         
         # Step 5: Clip values
-        map_indices = np.clip(map_indices, 0, len(self.char_map) - 1)
+        map_indices[map_indices < 0] = 1
+        map_indices[map_indices >= len(self.char_map)] = len(self.char_map) - 2
         
         # Step 6: Handle inversion
         if inverted:
@@ -71,7 +74,7 @@ class Img2Ascii:
                 line = ""
                 for x in range(char_w):
                     line += f"{self.char_map[map_indices[y, x]]} "
-                file.write(line.rstrip() + '\n')
+                file.write(line + '\n')
 
     def read_ascii(self, ascii_path: str) -> tuple[bytes, str]:
         with open(ascii_path, 'r', encoding="utf-8-sig") as file:
