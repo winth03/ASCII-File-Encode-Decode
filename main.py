@@ -28,9 +28,10 @@ class Img2Ascii:
         b_extension = ''.join(format(ord(c), '08b') for c in extension)
         
         extension_length = len(b_extension)
-        message_length = len(b_message) + 16 + 8 + extension_length
+        message_length = len(b_message) + 32 + 8 + extension_length
         
-        full_message = format(message_length, '016b') + format(extension_length, '08b') + b_extension + b_message
+        full_message = format(message_length, '032b') + format(extension_length, '08b') + b_extension + b_message
+        print(message_length, len(full_message))
         
         # Vectorized mapping
         char_h, char_w = reduced.shape
@@ -81,14 +82,14 @@ class Img2Ascii:
 
         message = ""
 
-        for i in range(16):
+        for i in range(32):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
 
         msg_length = int(message, 2)
         message = ""
 
-        for i in range(16, 24):
+        for i in range(32, 40):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
 
@@ -96,7 +97,7 @@ class Img2Ascii:
         message = ""
         extension = ""
 
-        for i in range(24, 24 + ext_length):
+        for i in range(40, 40 + ext_length):
             ch = input_text[i*2]
             message += str(self.char_map.index(ch) % 2)
             if len(message) == 8:
@@ -106,7 +107,7 @@ class Img2Ascii:
         message = bytearray()
         letter = ""
         offset = 0
-        i = 24 + ext_length
+        i = 40 + ext_length
         while i < msg_length:
             ch = input_text[i*2 + offset]
             if ch == '\n':
@@ -126,7 +127,6 @@ def main():
         ascii_path = sys.argv[1]
         obj = Img2Ascii()
         try:
-            # print(obj.read_ascii(ascii_path))
             data, extension = obj.read_ascii(ascii_path)
             file_name = filedialog.asksaveasfilename(title="Save File", filetypes=[("Files", f"*.{extension}")], initialfile=f"decoded.{extension}", defaultextension=extension)
             with open(file_name, 'wb') as file:

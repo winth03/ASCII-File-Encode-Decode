@@ -28,7 +28,7 @@ class Img2AsciiGUI:
 		self.file_to_hide = ""
 
 		self.size_limit = -1
-		
+		self.ascii_content = ""  # เพิ่มตัวแปรนี้เพื่อเก็บ ASCII content
 		self.create_widgets()
 
 	def create_widgets(self):
@@ -90,6 +90,10 @@ class Img2AsciiGUI:
 		self.copy_btn = ttk.Button(image_frame, text="Copy", command=self.copy_ascii, width=5)
 		self.copy_btn.pack(side=tk.TOP, padx=5, pady=5, anchor=tk.NE)
 
+		# เพิ่มปุ่ม Show Full Preview
+		self.show_preview_btn = ttk.Button(image_frame, text="Full Preview", command=self.show_full_preview, width=12)
+		self.show_preview_btn.pack(side=tk.TOP, padx=5, pady=5, anchor=tk.NE)
+
 		# Frame สำหรับ ASCII preview
 		self.ascii_frame = tk.Frame(ascii_container, bg="white", width=550, height=400, bd=2, relief=tk.SOLID)
 		self.ascii_frame.pack(side=tk.RIGHT, padx=5, expand=True, fill=tk.BOTH, anchor=tk.SE)
@@ -119,9 +123,8 @@ class Img2AsciiGUI:
 		self.result_text.pack(pady=5, padx=5)
 	
 	def copy_ascii(self):
-		ascii_content = self.ascii_text.get("1.0", tk.END)
 		self.master.clipboard_clear()
-		self.master.clipboard_append(ascii_content)
+		self.master.clipboard_append(self.ascii_content)
 		messagebox.showinfo("Copied", "ASCII content has been copied to clipboard.")
       
 	def create_tooltip(self, widget, text):
@@ -147,7 +150,7 @@ class Img2AsciiGUI:
 			self.result_text.insert(tk.END, f"Image added: {self.image_path}\n")
 
 			img_width, img_height = Image.open(self.image_path).size
-			self.size_limit = (img_width // GRID_RES) * (img_height // GRID_RES) - 24
+			self.size_limit = ((img_width // GRID_RES) * (img_height // GRID_RES) - 40) // 8
 			self.size_limit_label.configure(text=f"File to hide size limit: {'~' + format_bytes(self.size_limit) if self.size_limit >= 0 else '-'}")
 
 	def add_file(self):
@@ -176,9 +179,9 @@ class Img2AsciiGUI:
 				stop_time = time.time_ns()
 				self.result_text.insert(tk.END, f"Encoded successfully in {stop_time - start_time} ns. Output saved to: {ascii_path}\n")
 				with open(ascii_path, 'r', encoding='utf-8') as file:
-					ascii_content = file.read()
+					self.ascii_content = file.read()
 				self.ascii_text.delete(1.0, tk.END)
-				self.ascii_text.insert(tk.END, ascii_content)	
+				self.ascii_text.insert(tk.END, self.ascii_content)	
 		except Exception as e:
 			messagebox.showerror("Error", str(e))
 
@@ -203,6 +206,31 @@ class Img2AsciiGUI:
 		photo = ImageTk.PhotoImage(image)
 		label.config(image=photo)
 		label.image = photo  # Keep a reference
+
+	def show_full_preview(self):
+		if not self.ascii_content:
+			messagebox.showinfo("Info", "No ASCII content to display. Please encode an image first.")
+			return
+
+		# สร้างหน้าต่าง pop-up ใหม่
+		preview_window = tk.Toplevel(self.master)
+		preview_window.title("Full ASCII Preview")
+		preview_window.state('zoomed')  # เปิดแบบเต็มหน้าจอ
+
+		# สร้าง Text widget สำหรับแสดง ASCII
+		preview_text = tk.Text(preview_window, wrap=tk.NONE, font=("Courier", 4))
+		preview_text.pack(expand=True, fill=tk.BOTH)
+
+		# เพิ่ม Scrollbar
+		x_scrollbar = ttk.Scrollbar(preview_window, orient=tk.HORIZONTAL, command=preview_text.xview)
+		x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+		y_scrollbar = ttk.Scrollbar(preview_window, orient=tk.VERTICAL, command=preview_text.yview)
+		y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+		preview_text.configure(xscrollcommand=x_scrollbar.set, yscrollcommand=y_scrollbar.set)
+
+		# แสดง ASCII content
+		preview_text.insert(tk.END, self.ascii_content)
 
 def main():
   root = tk.Tk()
